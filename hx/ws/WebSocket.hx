@@ -188,6 +188,18 @@ class WebSocket extends WebSocketCommon {
         }
     }
 
+    static public function fromSocketImpl(socket:SocketImpl):WebSocket {
+        var ws = new WebSocket("ws://localhost", false);
+        ws.state = State.Body;
+        ws._socket = socket;
+        return ws;
+    }
+
+    public function startProcessingAfterSocketImpl(){
+        this.initProcessThread();
+    }
+
+    
     inline private function parseUrl(url)
     {
         var urlRegExp = ~/^(\w+?):\/\/([\w\.-]+)(:(\d+))?(\/.*)?$/;
@@ -233,14 +245,24 @@ class WebSocket extends WebSocketCommon {
     }
 
 
+
     public function open() {
         if (state != State.Handshake) {
             throw "Socket already connected";
         }
+        connect();
+        initProcessThread();
+
+        sendHandshake();
+    }
+
+    private function connect(){
         _socket.setBlocking(true);
         _socket.connect(new sys.net.Host(_host), _port);
         _socket.setBlocking(false);
+    }
 
+    private function initProcessThread() {
         #if !cs
 
         _processThread = Thread.create(processThread);
@@ -255,8 +277,6 @@ class WebSocket extends WebSocketCommon {
         });
 
         #end
-
-        sendHandshake();
     }
 
     private function processThread() {
