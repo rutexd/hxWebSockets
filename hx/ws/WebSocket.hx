@@ -192,6 +192,7 @@ class WebSocket extends WebSocketCommon {
         var ws = new WebSocket("ws://localhost", false);
         ws.state = State.Body;
         ws._socket = socket;
+        ws.initProcessThread();
         return ws;
     }
 
@@ -346,9 +347,7 @@ class WebSocket extends WebSocketCommon {
 
     private function handshake(httpResponse:HttpResponse) {
         if (httpResponse.code != 101) {
-            if (onerror != null) {
-                onerror(httpResponse.headers.get(HttpHeader.X_WEBSOCKET_REJECT_REASON));
-            }
+            onError(httpResponse.headers.get(HttpHeader.X_WEBSOCKET_REJECT_REASON));
             close();
             return;
         }
@@ -359,9 +358,7 @@ class WebSocket extends WebSocketCommon {
             trace("This server does not implement Sec-WebSocket-Key.");
         } else {
             if (secKey != makeWSKeyResponse(_encodedKey)) {
-                if (onerror != null) {
-                    onerror("Error during WebSocket handshake: Incorrect 'Sec-WebSocket-Accept' header value");
-                }
+                onError("Error during WebSocket handshake: Incorrect 'Sec-WebSocket-Accept' header value");
                 close();
                 return;
             }

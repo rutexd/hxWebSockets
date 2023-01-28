@@ -18,10 +18,12 @@ class WebSocketCommon {
     private var _onopenCalled:Null<Bool> = null;
     private var _lastError:Dynamic = null;
 
-    public var onopen:Void->Void;
-    public var onclose:Void->Void;
-    public var onerror:Dynamic->Void;
-    public var onmessage:MessageType->Void;
+
+    public function onOpen(){};
+    public function onClose(){};
+    public function onError(e: Dynamic){};
+    public function onMessage(data: MessageType){};
+
 
     private var _buffer:Buffer = new Buffer();
 
@@ -111,17 +113,13 @@ class WebSocketCommon {
                             var messageData = _payload.readAllAvailableBytes();
                             var unmaskedMessageData = (_isMasked) ? applyMask(messageData, _mask) : messageData;
                             if (_frameIsBinary) {
-                                if (this.onmessage != null) {
                                     var buffer = new Buffer();
                                     buffer.writeBytes(unmaskedMessageData);
-                                    this.onmessage(BytesMessage(buffer));
-                                }
+                                    this.onMessage(BytesMessage(buffer));
                             } else {
                                 var stringPayload = Utf8Encoder.decode(unmaskedMessageData);
                                 Log.data(stringPayload, id);
-                                if (this.onmessage != null) {
-                                    this.onmessage(StrMessage(stringPayload));
-                                }
+                                this.onMessage(StrMessage(stringPayload));
                             }
                             _payload = null;
                         }
@@ -149,11 +147,8 @@ class WebSocketCommon {
                 sendFrame(Bytes.alloc(0), OpCode.Close);
                 state = State.Closed;
                 _socket.close();
-            } catch (e:Dynamic) { }
-
-            if (onclose != null) {
-                onclose();
-            }
+            } catch (e:Dynamic) {}
+                this.onClose();
         }
     }
 
@@ -163,9 +158,7 @@ class WebSocketCommon {
             _socket.output.flush();
         } catch (e:Dynamic) {
             Log.debug(Std.string(e), id);
-            if (onerror != null) {
-                onerror(Std.string(e));
-            }
+            this.onError(Std.string(e));
         }
     }
 
@@ -212,17 +205,13 @@ class WebSocketCommon {
     private function process() {
         if (_onopenCalled == false) {
             _onopenCalled = true;
-            if (onopen != null) {
-                onopen();
-            }
+            this.onOpen();
         }
 
         if (_lastError != null) {
             var error = _lastError;
             _lastError = null;
-            if (onerror != null) {
-                onerror(error);
-            }
+            this.onError(error);
         }
 
         var needClose = false;
@@ -277,10 +266,7 @@ class WebSocketCommon {
                     state = State.Closed;
                     _socket.close();
                 } catch (e:Dynamic) { }
-
-                if (onclose != null) {
-                    onclose();
-                }
+                    this.onClose();
             }
         }
     }
@@ -294,9 +280,7 @@ class WebSocketCommon {
             _socket.output.write(Bytes.ofString(data));
             _socket.output.flush();
         } catch (e:Dynamic) {
-            if (onerror != null) {
-                onerror(Std.string(e));
-            }
+            this.onError(Std.string(e));
             close();
         }
     }
